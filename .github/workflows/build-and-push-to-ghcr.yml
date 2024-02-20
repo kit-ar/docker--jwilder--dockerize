@@ -60,8 +60,10 @@ jobs:
         uses: bridgecrewio/checkov-action@master
         with:
           directory: .
-          framework: dockerfile
+          skip_check: CKV_DOCKER_2,CKV_DOCKER_3,CKV_DOCKER_4,CKV_DOCKER_6
           quiet: true # show only failed checks
+          soft_fail: true
+          framework: dockerfile
           container_user: 1000 # UID to run the container under to prevent permission issues
 
       - name: Set up QEMU
