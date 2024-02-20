@@ -85,7 +85,7 @@ jobs:
           context: .
           file: Dockerfile
           platforms: linux/amd64,linux/arm64 # also support the new mac architecture (requires buildx)
-          push: ${{ inputs.publish }}
+          push: ${{ (github.event_name != 'pull_request') && inputs.publish }}
           tags: ${{ steps.tags.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
           # use layer caching. Don't forget mode=max to also cache the build image
