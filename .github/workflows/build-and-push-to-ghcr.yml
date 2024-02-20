@@ -11,7 +11,7 @@ on:
       - "main"
   workflow_dispatch:
 env:
-  REPO_NAME: "${{ env.REPO_NAME }}"
+  REPO_NAME: "kit-ar"
   IMAGE_NAME: "jwilder--dockerize"
 
 jobs:
