@@ -25,6 +25,18 @@ on:
         required: false
         description: the string to extract semver labels from. If empty, the ref/tag will be used (if on.tag trigger).
         default: ''
+  workflow_dispatch:
+    inputs:
+      publish:
+        type: boolean
+        description: Wether to publish the image to Github Registry
+        required: false
+        default: false
+      version:
+        type: string
+        required: false
+        description: the string to extract semver labels from. If empty, the ref/tag will be used (if on.tag trigger).
+        default: ''
 env:
   # REPO_NAME: "kit-ar"
   IMAGE_NAME: "jwilder--dockerize"
