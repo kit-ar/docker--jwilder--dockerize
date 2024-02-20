@@ -13,6 +13,7 @@ on:
   pull_request:
     branches:
       - "main"
+      - "master"
   workflow_call:
     inputs:
       publish:
@@ -63,7 +64,7 @@ jobs:
             type=semver,pattern={{major}},value=${{ inputs.version }}
             type=ref,event=branch,suffix=-{{ sha }}
             type=ref,event=pr
-            type=raw,value=latest,enable=${{ github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/') }}
+            type=raw,value=latest,enable=${{ github.ref == 'refs/heads/main' || 'refs/heads/master' || startsWith(github.ref, 'refs/tags/') }}
           flavor: |
             latest=false
 
