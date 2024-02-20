@@ -1,5 +1,9 @@
 name: Build and push Docker image to GHCR
 
+# https://blog.derlin.ch/github-actions-reusable-workflow-docker-images
+# https://github.com/derlin/rickroller/blob/main/.github/workflows/reusable_docker-build-and-push.yaml
+# https://docs.docker.com/build/ci/github-actions/manage-tags-labels/
+
 on:
   push:
     branches:
@@ -9,9 +13,20 @@ on:
   pull_request:
     branches:
       - "main"
-  workflow_dispatch:
+  workflow_call:
+    inputs:
+      publish:
+        type: boolean
+        description: Wether to publish the image to Github Registry
+        required: false
+        default: false
+      version:
+        type: string
+        required: false
+        description: the string to extract semver labels from. If empty, the ref/tag will be used (if on.tag trigger).
+        default: ''
 env:
-  REPO_NAME: "kit-ar"
+  # REPO_NAME: "kit-ar"
   IMAGE_NAME: "jwilder--dockerize"
 
 jobs:
@@ -20,35 +35,40 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-  
-      # https://docs.docker.com/build/ci/github-actions/manage-tags-labels/
+        
       - name: Docker meta
         id: meta
         uses: docker/metadata-action@v5
         with:
           # list of Docker images to use as base name for tags
           images: |
-            ghcr.io/${{ env.REPO_NAME }}/${{ env.IMAGE_NAME }}
+            ghcr.io/${{ github.REPOSITORY_OWNER }}/${{ env.IMAGE_NAME }}
 
           # generate Docker tags based on the following events/attributes
           tags: |
-            type=schedule
-            type=ref,event=branch
+            type=semver,pattern={{version}},value=${{ inputs.version }}
+            type=semver,pattern={{major}}.{{minor}},value=${{ inputs.version }}
+            type=semver,pattern={{major}},value=${{ inputs.version }}
+            type=ref,event=branch,suffix=-{{ sha }}
             type=ref,event=pr
-            type=semver,pattern=v{{version}}
-            type=semver,pattern=v{{major}}.{{minor}}
-            type=semver,pattern=v{{major}}
-            type=sha
+            type=raw,value=latest,enable=${{ github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/') }}
+          flavor: |
+            latest=false
+
+      - name: Scan Dockerfile vulnerabilities using Checkov
+        id: checkov
+        uses: bridgecrewio/checkov-action@master
+        with:
+          directory: .
+          framework: dockerfile
+          quiet: true # show only failed checks
+          container_user: 1000 # UID to run the container under to prevent permission issues
+
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v3
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
-      # - name: Login to DockerHub
-      #   uses: docker/login-action@v3
-      #   with:
-      #     username: ${{ secrets.DOCKERHUB_USERNAME }}
-      #     password: ${{ secrets.DOCKERHUB_TOKEN }}
       - name: Login to GHCR
         if: github.event_name != 'pull_request'
         uses: docker/login-action@v3
@@ -60,10 +80,14 @@ jobs:
       - name: Build and push
         uses: docker/build-push-action@v5
         with:
-          # push: true
-          push: ${{ github.event_name != 'pull_request' }}
           context: .
           file: Dockerfile
-          platforms: linux/amd64,linux/arm64
-          tags: ${{ steps.meta.outputs.tags }}
+          platforms: linux/amd64,linux/arm64 # also support the new mac architecture (requires buildx)
+          push: ${{ inputs.publish }}
+          tags: ${{ steps.tags.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
+          # use layer caching. Don't forget mode=max to also cache the build image
+          # (vs only the final image - mode: min)
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+          
