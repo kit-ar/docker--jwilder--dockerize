@@ -55,16 +55,16 @@ jobs:
           flavor: |
             latest=false
 
-      # - name: Scan Dockerfile vulnerabilities using Checkov
-      #   id: checkov
-      #   uses: bridgecrewio/checkov-action@master
-      #   with:
-      #     directory: .
-      #     skip_check: CKV_DOCKER_2,CKV_DOCKER_3,CKV_DOCKER_4,CKV_DOCKER_6
-      #     quiet: true # show only failed checks
-      #     soft_fail: true
-      #     framework: dockerfile
-      #     container_user: 1000 # UID to run the container under to prevent permission issues
+      - name: Scan Dockerfile vulnerabilities using Checkov
+        id: checkov
+        uses: bridgecrewio/checkov-action@master
+        with:
+          directory: .
+          skip_check: CKV_DOCKER_2,CKV_DOCKER_3,CKV_DOCKER_4,CKV_DOCKER_6
+          quiet: true # show only failed checks
+          soft_fail: true
+          framework: dockerfile
+          container_user: 1000 # UID to run the container under to prevent permission issues
 
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v3
@@ -85,7 +85,7 @@ jobs:
           context: .
           file: Dockerfile
           platforms: linux/amd64,linux/arm64 # also support the new mac architecture (requires buildx)
-          push: ${{ (github.event_name != 'pull_request') && inputs.publish }}
+          push: ${{ (github.event_name != 'pull_request') && (github.event.inputs.publish || false) }}
           tags: ${{ steps.tags.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
           # use layer caching. Don't forget mode=max to also cache the build image
